@@ -1,9 +1,9 @@
 # Input parameters:
 # - bucket: S3 bucket for build artifacts (CloudFormation needs permission to access files in this bucket)
-# - profile: (optional) Name of AWS CLI credential profile to use for S3 artifact upload 
-# - email: (only for "deploy") Email address of initial admin user to be auto-created 
+# - profile: (optional) Name of AWS CLI credential profile to use for S3 artifact upload
+# - email: (only for "deploy") Email address of initial admin user to be auto-created
 #
-# command syntax: 
+# command syntax:
 #   make build bucket=[myDeploymentBucket]
 #   make build bucket=[myDeploymentBucket] profile=[myAwsProfile] branch=[currentDevelopmentBranch]
 #   make deploy bucket=[myDeploymentBucket] email=[myAdminEmailAddress]
@@ -14,10 +14,10 @@ ifndef bucket
 $(error Missing command line parameter 'bucket=[bucket_name]')
 endif
 
-# check if "region" parameter is set, otherwise set region to "us-east-1" as default
+# check if "region" parameter is set, otherwise set region to "eu-west-1" as default
 ifndef region
-region=us-east-1
-$(info Parameter 'region' has not been set, defaulting to region 'us-east-1'.)
+region=eu-west-1
+$(info Parameter 'region' has not been set, defaulting to region 'eu-west-1'.)
 endif
 
 # add profile string when parameter profile has been set
@@ -25,7 +25,7 @@ ifdef profile
 profileString=--profile $(profile)
 endif
 
-# check if "branch" parameter is set for local development, otherwise set branch to "main" as default 
+# check if "branch" parameter is set for local development, otherwise set branch to "main" as default
 ifndef branch
 branch=main
 $(info Parameter 'branch' has not been set, defaulting to branch 'main'.)
@@ -36,7 +36,7 @@ endif
 .PHONY: all build clean
 .SILENT:
 
-build: 
+build:
 # create "build-cfn" folder if it doesn't exist and empty it
 	mkdir -p build-cfn
 	rm -f build-cfn/*
@@ -51,7 +51,7 @@ build:
 	aws s3 cp install/sandbox-accounts-for-events-install.yaml s3://$(bucket)/sandbox-accounts-for-events-install.yaml $(profileString)
 
 
-deploy: 
+deploy:
 # check if "email" parameter has bet set, else cancel script execution
 	if [ -z "$(email)" ]; then \
 		echo "*** Missing command line parameter 'email=[admin_email_address]'.  Stop."; \
@@ -65,7 +65,7 @@ deploy:
 		--region $(region); \
 	fi
 
-delete: 
+delete:
 	aws cloudformation delete-stack \
 	--stack-name Sandbox-Accounts-for-Events $(profileString) \
 	--region $(region)
