@@ -9,28 +9,25 @@
 #   make deploy bucket=[myDeploymentBucket] email=[myAdminEmailAddress]
 #   make deploy bucket=[myDeploymentBucket] email=[myAdminEmailAddress] profile=[myAwsProfile]
 
-# check if "bucket" parameter is set, otherwise cancel script execution
 ifndef bucket
-$(error Missing command line parameter 'bucket=[bucket_name]')
+bucket=atc-dce-deployment-artifacts
+$(info Parameter 'bucket' has not been set, defaulting to 'atc-dce-deployment-artifacts'.)
 endif
 
-# check if "region" parameter is set, otherwise set region to "eu-west-1" as default
 ifndef region
 region=eu-west-1
-$(info Parameter 'region' has not been set, defaulting to region 'eu-west-1'.)
+$(info Parameter 'region' has not been set, defaulting to 'eu-west-1'.)
 endif
 
-# add profile string when parameter profile has been set
-ifdef profile
-profileString=--profile $(profile)
+ifndef profile
+profile="dce-master"
+$(info Parameter 'profile' has not been set, defaulting to 'dce-master'.)
 endif
 
-# check if "branch" parameter is set for local development, otherwise set branch to "main" as default
 ifndef branch
 branch=main
-$(info Parameter 'branch' has not been set, defaulting to branch 'main'.)
+$(info Parameter 'branch' has not been set, defaulting to 'main'.)
 endif
-
 
 # avoid interferences between "build" folder and "build" command, clear build history
 .PHONY: all build clean
@@ -47,8 +44,8 @@ build:
 	cd install/cfn-lambda/dceHandleAmplifyDeployment && zip -FSr ../../../build-cfn/sandbox-accounts-for-events-lambda-amplify.zip . && cd -
 
 # upload build artifacts and CloudFormation template to specified S3 bucket
-	aws s3 sync build-cfn s3://$(bucket) $(profileString)
-	aws s3 cp install/sandbox-accounts-for-events-install.yaml s3://$(bucket)/sandbox-accounts-for-events-install.yaml $(profileString)
+	aws s3 sync build-cfn s3://$(bucket) --profile $(profile)
+	aws s3 cp install/sandbox-accounts-for-events-install.yaml s3://$(bucket)/sandbox-accounts-for-events-install.yaml --profile $(profile)
 
 
 deploy:
@@ -56,23 +53,22 @@ deploy:
 	if [ -z "$(email)" ]; then \
 		echo "*** Missing command line parameter 'email=[admin_email_address]'.  Stop."; \
 	else \
-		aws cloudformation create-stack \
+		aws cloudformation deploy \
 		--stack-name Sandbox-Accounts-for-Events \
-		--template-url https://$(bucket).s3.amazonaws.com/sandbox-accounts-for-events-install.yaml \
-		--parameters ParameterKey=AdminUserEmailInput,ParameterValue=$(email) \
-		             ParameterKey=RepositoryBucket,ParameterValue=$(bucket) \
-		--capabilities CAPABILITY_IAM $(profileString) \
+		--template-file install/sandbox-accounts-for-events-install.yaml \
+		--parameter-overrides ParameterKey=AdminUserEmailInput,ParameterValue=$(email) ParameterKey=RepositoryBucket,ParameterValue=$(bucket) \
+		--capabilities CAPABILITY_IAM --profile $(profile) \
 		--region $(region); \
 	fi
 
 delete:
 	aws cloudformation delete-stack \
-	--stack-name Sandbox-Accounts-for-Events $(profileString) \
+	--stack-name Sandbox-Accounts-for-Events --profile $(profile) \
 	--region $(region)
 
 create-bucket:
-	aws s3 mb s3://$(bucket) --region $(region) $(profileString)
+	aws s3 mb s3://$(bucket) --region $(region) --profile $(profile)
 
 delete-bucket:
-	aws s3 rb s3://$(bucket) --region $(region) $(profileString) --force
+	aws s3 rb s3://$(bucket) --region $(region) --profile $(profile) --force
 
